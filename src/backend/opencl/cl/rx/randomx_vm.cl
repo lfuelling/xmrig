@@ -626,8 +626,8 @@ __kernel void init_vm(__global const void* entropy_data, __global void* vm_state
 				if (opcode < RANDOMX_FREQ_ISTORE)
 				{
 					latency = reg_read_latency;
-					update_max(latency, (last_memory_op_slot + WORKERS_PER_HASH) / WORKERS_PER_HASH);
-					is_memory_op = true;
+                    update_max(latency, (uint32_t)((last_memory_op_slot + WORKERS_PER_HASH) / WORKERS_PER_HASH));
+                    is_memory_op = true;
 					is_memory_store = true;
 					break;
 				}
@@ -654,16 +654,16 @@ __kernel void init_vm(__global const void* entropy_data, __global void* vm_state
 			}
 
 			int32_t first_allowed_slot = first_available_slot;
-			update_max(first_allowed_slot, latency * WORKERS_PER_HASH);
+            update_max(first_allowed_slot, (int32_t)(latency * WORKERS_PER_HASH));
 			if (is_cfround)
 				update_max(first_allowed_slot, first_allowed_slot_cfround);
 			else
-				update_max(first_allowed_slot, get_byte(is_fp ? registerReadCycleFP : registerReadCycle, dst) * WORKERS_PER_HASH);
+                update_max(first_allowed_slot, (int32_t)(get_byte(is_fp ? registerReadCycleFP : registerReadCycle, dst) * WORKERS_PER_HASH));
 
 			if (is_swap)
-				update_max(first_allowed_slot, get_byte(registerReadCycle, src) * WORKERS_PER_HASH);
+                update_max(first_allowed_slot, (int32_t)(get_byte(registerReadCycle, src) * WORKERS_PER_HASH));
 
-			int32_t slot_to_use = last_used_slot + 1;
+            int32_t slot_to_use = last_used_slot + 1;
 			update_max(slot_to_use, first_allowed_slot);
 
 			if (is_fp)
@@ -934,7 +934,11 @@ __kernel void init_vm(__global const void* entropy_data, __global void* vm_state
 
 			uint32_t num_workers = 1;
 			uint32_t num_fp_insts = 0;
-			while ((i + num_workers <= last_used_slot) && ((i + num_workers) % WORKERS_PER_HASH) && (execution_plan[i + num_workers] || (i + num_workers == first_instruction_slot) || ((i + num_workers == first_instruction_slot + 1) && first_instruction_fp)))
+            while (((int)(i + num_workers) <= (int)last_used_slot) &&
+                ((i + num_workers) % WORKERS_PER_HASH) &&
+                (execution_plan[i + num_workers] ||
+                ((int)(i + num_workers) == (int)first_instruction_slot) ||
+                (((int)(i + num_workers) == (int)(first_instruction_slot + 1)) && first_instruction_fp)))
 			{
 				if ((num_workers & 1) && ((src_program[execution_plan[i + num_workers]].x & (0x20 << 8)) != 0))
 					++num_fp_insts;
@@ -1630,7 +1634,7 @@ double sqrt_rnd(double x, uint32_t fprc)
 	// First Newton-Raphson iteration
 	double t0 = y0 * x;
 	double t1 = y0 * -0.5;
-	t1 = fma(t1, t0, 0.5);					// 0.5 * (1.0 - y0 * y0 * x)
+    t1 = fma((float)t1, (float)t0, 0.5f);	// 0.5 * (1.0 - y0 * y0 * x)
 	const double y1_x = fma(t0, t1, t0);	// y1 * x = 0.5 * y0 * x * (3.0 - y0 * y0 * x)
 
 	// Second Newton-Raphson iteration
